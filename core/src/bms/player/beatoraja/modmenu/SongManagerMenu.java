@@ -55,6 +55,9 @@ public class SongManagerMenu {
                     }
                     ImGui.endPopup();;
                 }
+
+                String path = currentSongData.map(SongData::getPath).orElse("");
+                ImGui.text("path: \n" + path);
             }
         }
         ImGui.end();
