@@ -60,6 +60,7 @@ public class SkinTextFont extends SkinText {
     }
 
     public void prepareFont(String text) {
+        // this needs to run on skin switch
         if(font != null) {
             font.dispose();                	
             font = null;

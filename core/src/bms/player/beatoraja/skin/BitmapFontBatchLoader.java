@@ -82,9 +82,10 @@ public class BitmapFontBatchLoader {
                 if (nextFontData == null) continue;
                 for (String imagePath : nextFontData.imagePaths) {
                     pool.submit(() -> {
-                        resource.get(imagePath);
                         try {
-                            loadedImages.put(imagePath);
+                            if (resource.get(imagePath) != null) {
+                                loadedImages.put(imagePath);
+                            }
                         }
                         catch (InterruptedException e) {
                         }
@@ -134,7 +135,12 @@ public class BitmapFontBatchLoader {
             }
 
             CacheableBitmapFont fontCache = new CacheableBitmapFont();
-            fontCache.font = new BitmapFont(fontData, imageRegions, true);
+            try {
+                fontCache.font = new BitmapFont(fontData, imageRegions, true);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
             fontCache.fontData = fontData;
             fontCache.regions = imageRegions;
             fontCache.type = fontPaths.get(path);

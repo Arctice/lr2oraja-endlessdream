@@ -33,13 +33,14 @@ public class ImGuiRenderer {
 
     private static InputProcessor tmpProcessor;
 
-    private static ImBoolean SHOW_MOD_MENU = new ImBoolean(false);
+    private static ImBoolean SHOW_MOD_MENU = new ImBoolean(true);
     private static ImBoolean SHOW_RANDOM_TRAINER = new ImBoolean(false);
     private static ImBoolean SHOW_FREQ_PLUS = new ImBoolean(false);
     private static ImBoolean SHOW_JUDGE_TRAINER = new ImBoolean(false);
     private static ImBoolean SHOW_SONG_MANAGER = new ImBoolean(false);
     private static ImBoolean SHOW_DOWNLOAD_MENU = new ImBoolean(false);
     private static ImBoolean SHOW_PERFORMANCE_MONITOR = new ImBoolean(false);
+    private static ImBoolean SHOW_SKIN_MENU = new ImBoolean(true);
     private static ImBoolean SHOW_MISC_SETTING = new ImBoolean(false);
 
 
@@ -111,6 +112,7 @@ public class ImGuiRenderer {
                 SHOW_PERFORMANCE_MONITOR.get()) {
                 PerformanceMonitor.reloadEventTree();
             }
+            if (ImGui.checkbox("Show Skin Menu", SHOW_SKIN_MENU)) { SkinMenu.invalidate(); }
             ImGui.checkbox("Show Misc Setting Menu", SHOW_MISC_SETTING);
 
             if (SHOW_FREQ_PLUS.get()) {
@@ -131,6 +133,9 @@ public class ImGuiRenderer {
             }
             if (SHOW_PERFORMANCE_MONITOR.get()) {
                 PerformanceMonitor.show(SHOW_PERFORMANCE_MONITOR);
+            }
+            if (SHOW_SKIN_MENU.get()) {
+                SkinMenu.show(SHOW_SKIN_MENU);
             }
             if (SHOW_MISC_SETTING.get()) {
                 MiscSettingMenu.show(SHOW_MISC_SETTING);
