@@ -497,7 +497,7 @@ public final class BarRenderer {
 		}
 	}
 
-	void updateBarText() {
+	public void updateBarText() {
 		bartextupdate = true;
 	}
 	
