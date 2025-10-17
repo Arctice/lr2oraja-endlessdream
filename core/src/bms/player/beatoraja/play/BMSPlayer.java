@@ -113,7 +113,9 @@ public class BMSPlayer extends MainState {
 
 		ReplayData HSReplay = null;
 
-		if(resource.getChartOption() != null) {
+        Optional<Long> ghostForceLaneOrder = GhostBattlePattern.consume();
+
+		if(!ghostForceLaneOrder.isPresent() && resource.getChartOption() != null) {
 			ReplayData chartOption = resource.getChartOption();
 			playinfo.randomoption = chartOption.randomoption;
 			playinfo.randomoptionseed = chartOption.randomoptionseed;
@@ -369,7 +371,13 @@ public class BMSPlayer extends MainState {
 			if(playinfo.randomoptionseed != -1) {
 				pm.setSeed(playinfo.randomoptionseed);
 			} else {
-				if (RandomTrainer.isActive() && model.getMode() == Mode.BEAT_7K && RandomTrainer.getRandomSeedMap() != null) {
+                if (ghostForceLaneOrder.isPresent()) {
+					HashMap<Integer, Long> seedmap = RandomTrainer.getRandomSeedMap();
+                    Integer pattern = ghostForceLaneOrder.get().intValue();
+					Logger.getGlobal().info("Ghost battle - fixing lane pattern to " + pattern);
+					pm.setSeed(seedmap.get(pattern));
+                }
+                else if (RandomTrainer.isActive() && model.getMode() == Mode.BEAT_7K && RandomTrainer.getRandomSeedMap() != null) {
 					HashMap<Integer, Long> seedmap = RandomTrainer.getRandomSeedMap();
 					Logger.getGlobal().info("RandomTrainer: Enabled, modifying random seed");
 					pm.setSeed(seedmap.get(Integer.parseInt(RandomTrainer.getLaneOrder())));
@@ -512,8 +520,13 @@ public class BMSPlayer extends MainState {
 			} else {
 				resource.setTargetScoreData(resource.getRivalScoreData());
 			}
-			getScoreDataProperty().setTargetScore(score.getExscore(), score.decodeGhost(), resource.getTargetScoreData() != null ? resource.getTargetScoreData().getExscore() : 0 , null, model.getTotalNotes());
-		}
+            ScoreData target = resource.getTargetScoreData();
+            getScoreDataProperty().setTargetScore(
+                score.getExscore(), score.decodeGhost(),
+                target != null ? target.getExscore() : 0,
+                target != null ? target.decodeGhost() : null,
+                model.getTotalNotes());
+        }
 	}
 
 	@Override
