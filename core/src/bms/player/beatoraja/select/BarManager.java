@@ -294,14 +294,17 @@ public class BarManager {
 			dir.clear();
 			sourcebars.clear();
 			l.addAll(new FolderBar(select, null, "e2977170").getChildren());
-			l.add(courses);
-			l.addAll(favorites);
+            try (var perf = PerformanceMetrics.get().Event("Tags load")) {
+                l.addAll(select.main.getTagManager().createTagBars(select));
+            }
+			// l.add(courses);
+			// l.addAll(favorites);
 			appendFolders.keySet().forEach((key) -> {
 			    l.add(appendFolders.get(key));
 			});
-			l.addAll(tables);
-			l.addAll(commands);
-			l.addAll(search);
+			// l.addAll(tables);
+			// l.addAll(commands);
+			// l.addAll(search);
 		} else if (bar instanceof DirectoryBar) {
 			showInvisibleCharts = ((DirectoryBar)bar).isShowInvisibleChart();
 			if(dir.indexOf((DirectoryBar) bar, true) != -1) {

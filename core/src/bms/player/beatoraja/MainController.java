@@ -41,6 +41,7 @@ import bms.player.beatoraja.skin.SkinLoader;
 import bms.player.beatoraja.skin.SkinObject.SkinOffset;
 import bms.player.beatoraja.skin.SkinProperty;
 import bms.player.beatoraja.song.*;
+import bms.player.beatoraja.tags.TagManager;
 import bms.player.beatoraja.stream.StreamController;
 import bms.tool.mdprocessor.MusicDownloadProcessor;
 
@@ -112,6 +113,8 @@ public class MainController {
 	 * プレイデータアクセサ
 	 */
 	private PlayDataAccessor playdata;
+
+	private TagManager tags;
 
 	private SystemSoundManager sound;
 
@@ -187,6 +190,9 @@ public class MainController {
 		}
 
 		playdata = new PlayDataAccessor(config);
+        try (var perf = PerformanceMetrics.get().Event("Tag DB init")) {
+            tags = new TagManager(this, config);
+        }
 
 		initializeIRConfig();
 
@@ -275,6 +281,10 @@ public class MainController {
 
 	public PlayDataAccessor getPlayDataAccessor() {
 		return playdata;
+	}
+
+	public TagManager getTagManager() {
+		return tags;
 	}
 	
 	public RivalDataAccessor getRivalDataAccessor() {
@@ -574,6 +584,7 @@ public class MainController {
 
 	private void updateStateReferences() {
 		SkinMenu.init(this, player);
+		TagManagerMenu.init(this);
 		SongManagerMenu.injectMusicSelector(selector);
 	}
 
