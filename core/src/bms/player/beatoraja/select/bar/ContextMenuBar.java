@@ -2,6 +2,9 @@ package bms.player.beatoraja.select.bar;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.song.SongData;
@@ -15,6 +18,10 @@ import static bms.player.beatoraja.select.bar.FunctionBar.*;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_OPEN;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.OPTION_CHANGE;
 
+import bms.player.beatoraja.tags.TagManager;
+import bms.player.beatoraja.tags.TagHeader;
+import bms.player.beatoraja.tags.TagHierarchy;
+
 import java.net.URI;
 import java.awt.Desktop;
 
@@ -24,7 +31,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Clipboard;
 public class ContextMenuBar extends DirectoryBar {
     private SongData song = null;
     private TableBar table = null;
-    private boolean showMeta = false;
+	private TagBar tag = null;
     private String title;
 
     public static boolean browserOpen(String url) {
@@ -52,11 +59,17 @@ public class ContextMenuBar extends DirectoryBar {
     }
 
     public ContextMenuBar(MusicSelector selector, TableBar table) {
-        // sets showInvisibleChart = true
         super(selector, true);
         this.setSortable(false);
         this.table = table;
         this.title = table.getTableData().getName();
+    }
+
+    public ContextMenuBar(MusicSelector selector, TagBar tag) {
+        super(selector, true);
+        this.setSortable(false);
+        this.tag = tag;
+        this.title = tag.getTag().getName();
     }
 
     public String getTitle() { return title; }
@@ -67,6 +80,7 @@ public class ContextMenuBar extends DirectoryBar {
         if (song != null && song.getPath() != null) { return songContext(); }
         else if (song != null && song.getPath() == null) { return missingSongContext(); }
         else if (table != null) { return tableContext(); }
+        else if (tag != null) { return selector.main.getTagManager().tagContext(selector, tag); }
         else { return new Bar[0]; }
     }
 
@@ -172,6 +186,7 @@ public class ContextMenuBar extends DirectoryBar {
         favSong.setSongData(song);
         options.add(favSong);
 
+        addTagManagement(options);
         addTagDisplayEntries(options);
 
         for (int i = 0; i < MusicSelector.REPLAY; ++i) {
@@ -205,6 +220,8 @@ public class ContextMenuBar extends DirectoryBar {
         options.add(lr2ir);
     }
 
+    private boolean showMeta = false;
+
     private void addMetaEntries(ArrayList<Bar> options) {
         var lr2irPage = new FunctionBar((selector, self) -> {
             String urlBase =
@@ -228,68 +245,142 @@ public class ContextMenuBar extends DirectoryBar {
                 selector.play(OPTION_CHANGE);
             }
         }, "Metadata", showMeta ? STYLE_TABLE : STYLE_SEARCH);
-        options.add(meta);
-        if (showMeta) {
-            // var explain =
-            //     new FunctionBar((selector, self) -> {}, "Press play to copy:", STYLE_SEARCH);
-            var title = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getTitle());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied song title to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Title", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var md5 = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getMd5());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied MD5 to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy MD5", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var sha256 = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getSha256());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied SHA256 to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy SHA256", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var path = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getPath());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied song path to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Path", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var urltext = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getUrl());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied URL to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy URL", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var appendUrltext = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getAppendurl());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied append URL to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Append URL", STYLE_SEARCH, STYLE_TEXT_NEW);
 
-            title.setSubtitle(song.getTitle());
-            md5.setSubtitle(song.getMd5());
-            sha256.setSubtitle(song.getSha256());
-            urltext.setSubtitle(song.getUrl());
-            appendUrltext.setSubtitle(song.getAppendurl());
-            // options.add(explain);
-            if (song.getTitle() != null) { options.add(title); }
-            if (song.getMd5() != null) { options.add(md5); }
-            if (song.getSha256() != null) { options.add(sha256); }
-            if (song.getPath() != null) { options.add(path); }
-            if (song.getUrl() != null) { options.add(urltext); }
-            if (song.getAppendurl() != null && !song.getAppendurl().equals(song.getUrl())) {
-                options.add(appendUrltext);
+        options.add(meta);
+
+        if (!showMeta) { return; }
+
+        var title = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getTitle());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied song title to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Title", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var md5 = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getMd5());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied MD5 to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy MD5", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var sha256 = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getSha256());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied SHA256 to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy SHA256", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var path = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getPath());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied song path to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Path", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var urltext = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getUrl());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied URL to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy URL", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var appendUrltext = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getAppendurl());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied append URL to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Append URL", STYLE_SEARCH, STYLE_TEXT_NEW);
+
+        title.setSubtitle(song.getTitle());
+        md5.setSubtitle(song.getMd5());
+        sha256.setSubtitle(song.getSha256());
+        urltext.setSubtitle(song.getUrl());
+        appendUrltext.setSubtitle(song.getAppendurl());
+        if (song.getTitle() != null) { options.add(title); }
+        if (song.getMd5() != null) { options.add(md5); }
+        if (song.getSha256() != null) { options.add(sha256); }
+        if (song.getPath() != null) { options.add(path); }
+        if (song.getUrl() != null) { options.add(urltext); }
+        if (song.getAppendurl() != null && !song.getAppendurl().equals(song.getUrl())) {
+            options.add(appendUrltext);
+        }
+    }
+
+    private boolean showTagManagement = false;
+
+    private Map<TagHierarchy, List<TagHierarchy>> tagTree = null;
+
+    private void addTagTreeEntry(ArrayList<Bar> options, TagHierarchy tag) {
+        String entry = tag.getName();
+        if (entry.isEmpty()) { entry = String.valueOf(tag.getLevel()); }
+        var tagBar = new FunctionBar((selector, self) -> {
+            TagManager tags = this.selector.main.getTagManager();
+            List<TagHierarchy> folders = tags.tagFolders(tag.getTagid());
+            if (!folders.isEmpty()) { tagTree.put(tag, folders); }
+            else { tags.tagChart(tag.getTagid(), song.getSha256()); }
+            selector.getBarManager().updateBar();
+            // self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            // selector.getBarManager().updateBar();
+        }, entry, STYLE_SEARCH);
+        // ,STYLE_TEXT_NEW
+        options.add(tagBar);
+
+        List<TagHierarchy> children = tagTree.get(tag);
+        if (children == null) { return; }
+        for (var subtag : children) { addTagTreeEntry(options, subtag); }
+    }
+
+    private void addTagManagement(ArrayList<Bar> options) {
+        var manage = new FunctionBar((selector, self) -> {
+            if (!showTagManagement) {
+                showTagManagement = true;
+                selector.getBarManager().updateBar();
+                selector.play(OPTION_CHANGE);
+            }
+        }, "Manage Tags", showTagManagement ? STYLE_TABLE : STYLE_SEARCH);
+        options.add(manage);
+
+        if (!showTagManagement) return;
+
+        if (tagTree == null) {
+            List<TagHeader> tags = this.selector.main.getTagManager().allTagHeaders();
+            tagTree = new LinkedHashMap<TagHierarchy, List<TagHierarchy>>();
+            for (TagHeader tag : tags) {
+                TagHierarchy entry = new TagHierarchy(tag.getId(), -1, 0);
+                entry.setName(tag.getName());
+                tagTree.put(entry, null);
             }
         }
+
+        // for (TagHierarchy subtag : folders) {
+        // options.add(new TagBar(this.selector, header, subtag));
+
+        for (TagHierarchy tag : tagTree.keySet()) { addTagTreeEntry(options, tag); }
+
+        // List<TagHeader> marked = this.selector.main.getTagManager().chartTags(song.getSha256());
+        // List<TagHeader> missing =
+        //     this.selector.main.getTagManager().chartTagsComplement(song.getSha256());
+
+        // for (TagHeader tag : missing) {
+        //     var entry = "Add to " + tag.getName();
+        //     var tagBar = new FunctionBar((selector, self) -> {
+        //         this.selector.main.getTagManager().tagChart(tag.getId(), song.getSha256());
+        //         self.setDisplayTextType(STYLE_TEXT_PLAIN);
+        //         selector.getBarManager().updateBar();
+        //     }, entry, STYLE_SEARCH, STYLE_TEXT_NEW);
+        //     options.add(tagBar);
+        // }
+
+        // for (TagHeader tag : marked) {
+        //     var entry = "[" + tag.getName() + "]";
+        //     var tagBar = new FunctionBar((selector, self) -> {
+        //         self.setDisplayTextType(STYLE_TEXT_PLAIN);
+        //         // selector.getBarManager().updateBar();
+        //     }, entry, STYLE_SEARCH, STYLE_TEXT_NEW);
+        //     options.add(tagBar);
+        // }
     }
 
     private void addTagDisplayEntries(ArrayList<Bar> options) {
@@ -392,8 +483,8 @@ public class ContextMenuBar extends DirectoryBar {
 //  ir rival scores
 //  readme (imgui popup)
 //  play history
-//	tag editing
 //  replay score, lamp, random lanes
+// properly set invisible chart in tagbar's parent constructor
 
 // folder menu:
 //  select a table to filter by
