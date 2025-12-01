@@ -37,6 +37,8 @@ public class ImGuiRenderer {
 
     private static InputProcessor tmpProcessor;
 
+	private static boolean keyboardCapture = false;
+
     private static ImBoolean SHOW_MOD_MENU = new ImBoolean(false);
     private static ImBoolean SHOW_RANDOM_TRAINER = new ImBoolean(false);
     private static ImBoolean SHOW_FREQ_PLUS = new ImBoolean(false);
@@ -47,7 +49,6 @@ public class ImGuiRenderer {
     private static ImBoolean SHOW_PERFORMANCE_MONITOR = new ImBoolean(false);
     private static ImBoolean SHOW_SKIN_MENU = new ImBoolean(false);
     private static ImBoolean SHOW_MISC_SETTING = new ImBoolean(false);
-
 
     public static void init() {
         Lwjgl3Graphics lwjglGraphics = ((Lwjgl3Graphics) Gdx.graphics);
@@ -172,13 +173,16 @@ public class ImGuiRenderer {
             ImGui.end();
         }
 
+        TagManagerMenu.show();
+
         ImGuiNotify.renderNotifications();
     }
-
 
     public static void end() {
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
+
+        keyboardCapture = ImGui.getIO().getWantCaptureKeyboard();
 
         if (ImGui.getIO().getWantCaptureKeyboard()
                 || ImGui.getIO().getWantCaptureMouse()) {
@@ -186,6 +190,8 @@ public class ImGuiRenderer {
             Gdx.input.setInputProcessor(null);
         }
     }
+
+    public static boolean isKeyboardCaptured() { return keyboardCapture; }
 
     public static void dispose() {
         imGuiGl3.shutdown();

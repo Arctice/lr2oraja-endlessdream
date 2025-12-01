@@ -295,8 +295,8 @@ public class EventFactory {
 				Bar selected = selector.getBarManager().getSelected();
 				if (selected instanceof FolderBar) {
 					selector.main.updateSong(((FolderBar) selected).getFolderData().getPath());
-				} else if (selected instanceof TableBar) {
-					selector.main.updateTable((TableBar) selected);
+				} else if (selected instanceof TagBar) {
+					selector.main.getTagManager().updateTag(((TagBar) selected).getHeader());
 				} else if (selected instanceof SongBar) {
 					final String path = ((SongBar) selected).getSongData().getPath();
 					if (path != null) {

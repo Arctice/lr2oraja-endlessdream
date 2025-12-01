@@ -202,6 +202,13 @@ public enum MusicSelectCommand {
             }
             else if (bar.updateBar(current)) { selector.play(FOLDER_OPEN); }
         }
+        else if (current instanceof TagBar) {
+            if (!alreadyInContextMenu) {
+                bar.updateBar(new ContextMenuBar(selector, ((TagBar)current)));
+                selector.play(FOLDER_OPEN);
+            }
+            else if (bar.updateBar(current)) { selector.play(FOLDER_OPEN); }
+        }
     });
 
     public final Consumer<MusicSelector> function;
