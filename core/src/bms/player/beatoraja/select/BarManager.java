@@ -294,14 +294,15 @@ public class BarManager {
 			dir.clear();
 			sourcebars.clear();
 			l.addAll(new FolderBar(select, null, "e2977170").getChildren());
-			l.add(courses);
-			l.addAll(favorites);
+            l.addAll(select.main.getTagManager().createMusicSelectBars(select));
+			// l.add(courses);
+			// l.addAll(favorites);
 			appendFolders.keySet().forEach((key) -> {
 			    l.add(appendFolders.get(key));
 			});
-			l.addAll(tables);
-			l.addAll(commands);
-			l.addAll(search);
+			// l.addAll(tables);
+			// l.addAll(commands);
+			// l.addAll(search);
 		} else if (bar instanceof DirectoryBar) {
 			showInvisibleCharts = ((DirectoryBar)bar).isShowInvisibleChart();
 			if(dir.indexOf((DirectoryBar) bar, true) != -1) {

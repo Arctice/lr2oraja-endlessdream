@@ -2,6 +2,8 @@ package bms.player.beatoraja.select.bar;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 import bms.player.beatoraja.song.SongData;
@@ -15,6 +17,8 @@ import static bms.player.beatoraja.select.bar.FunctionBar.*;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.FOLDER_OPEN;
 import static bms.player.beatoraja.SystemSoundManager.SoundType.OPTION_CHANGE;
 
+import bms.player.beatoraja.tags.TagHeader;
+
 import java.net.URI;
 import java.awt.Desktop;
 
@@ -25,6 +29,7 @@ public class ContextMenuBar extends DirectoryBar {
     private SongData song = null;
     private TableBar table = null;
     private boolean showMeta = false;
+    private boolean showTagManagement = false;
     private String title;
 
     public static boolean browserOpen(String url) {
@@ -172,6 +177,7 @@ public class ContextMenuBar extends DirectoryBar {
         favSong.setSongData(song);
         options.add(favSong);
 
+        addTagManagement(options);
         addTagDisplayEntries(options);
 
         for (int i = 0; i < MusicSelector.REPLAY; ++i) {
@@ -228,67 +234,101 @@ public class ContextMenuBar extends DirectoryBar {
                 selector.play(OPTION_CHANGE);
             }
         }, "Metadata", showMeta ? STYLE_TABLE : STYLE_SEARCH);
-        options.add(meta);
-        if (showMeta) {
-            // var explain =
-            //     new FunctionBar((selector, self) -> {}, "Press play to copy:", STYLE_SEARCH);
-            var title = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getTitle());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied song title to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Title", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var md5 = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getMd5());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied MD5 to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy MD5", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var sha256 = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getSha256());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied SHA256 to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy SHA256", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var path = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getPath());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied song path to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Path", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var urltext = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getUrl());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied URL to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy URL", STYLE_SEARCH, STYLE_TEXT_NEW);
-            var appendUrltext = new FunctionBar((selector, self) -> {
-                Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
-                clipboard.setContents(song.getAppendurl());
-                self.setDisplayTextType(STYLE_TEXT_PLAIN);
-                ImGuiNotify.info("Copied append URL to clipboard.");
-                selector.play(OPTION_CHANGE);
-            }, "Copy Append URL", STYLE_SEARCH, STYLE_TEXT_NEW);
 
-            title.setSubtitle(song.getTitle());
-            md5.setSubtitle(song.getMd5());
-            sha256.setSubtitle(song.getSha256());
-            urltext.setSubtitle(song.getUrl());
-            appendUrltext.setSubtitle(song.getAppendurl());
-            // options.add(explain);
-            if (song.getTitle() != null) { options.add(title); }
-            if (song.getMd5() != null) { options.add(md5); }
-            if (song.getSha256() != null) { options.add(sha256); }
-            if (song.getPath() != null) { options.add(path); }
-            if (song.getUrl() != null) { options.add(urltext); }
-            if (song.getAppendurl() != null && !song.getAppendurl().equals(song.getUrl())) {
-                options.add(appendUrltext);
+        options.add(meta);
+
+        if (!showMeta) { return; }
+
+        var title = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getTitle());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied song title to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Title", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var md5 = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getMd5());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied MD5 to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy MD5", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var sha256 = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getSha256());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied SHA256 to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy SHA256", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var path = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getPath());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied song path to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Path", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var urltext = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getUrl());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied URL to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy URL", STYLE_SEARCH, STYLE_TEXT_NEW);
+        var appendUrltext = new FunctionBar((selector, self) -> {
+            Lwjgl3Clipboard clipboard = new Lwjgl3Clipboard();
+            clipboard.setContents(song.getAppendurl());
+            self.setDisplayTextType(STYLE_TEXT_PLAIN);
+            ImGuiNotify.info("Copied append URL to clipboard.");
+            selector.play(OPTION_CHANGE);
+        }, "Copy Append URL", STYLE_SEARCH, STYLE_TEXT_NEW);
+
+        title.setSubtitle(song.getTitle());
+        md5.setSubtitle(song.getMd5());
+        sha256.setSubtitle(song.getSha256());
+        urltext.setSubtitle(song.getUrl());
+        appendUrltext.setSubtitle(song.getAppendurl());
+        if (song.getTitle() != null) { options.add(title); }
+        if (song.getMd5() != null) { options.add(md5); }
+        if (song.getSha256() != null) { options.add(sha256); }
+        if (song.getPath() != null) { options.add(path); }
+        if (song.getUrl() != null) { options.add(urltext); }
+        if (song.getAppendurl() != null && !song.getAppendurl().equals(song.getUrl())) {
+            options.add(appendUrltext);
+        }
+    }
+
+    private void addTagManagement(ArrayList<Bar> options) {
+        var manage = new FunctionBar((selector, self) -> {
+            if (!showTagManagement) {
+                showTagManagement = true;
+                selector.getBarManager().updateBar();
+                selector.play(OPTION_CHANGE);
             }
+        }, "Manage Tags", showTagManagement ? STYLE_TABLE : STYLE_SEARCH);
+        options.add(manage);
+        if (!showTagManagement) return;
+
+        List<TagHeader> marked = this.selector.main.getTagManager().chartTags(song.getSha256());
+        List<TagHeader> missing =
+            this.selector.main.getTagManager().chartTagsComplement(song.getSha256());
+
+        for (TagHeader tag : missing) {
+            var entry = "Add to " + tag.getName();
+            var tagBar = new FunctionBar((selector, self) -> {
+                this.selector.main.getTagManager().tagChart(tag.getId(), song.getSha256());
+                self.setDisplayTextType(STYLE_TEXT_PLAIN);
+                selector.getBarManager().updateBar();
+            }, entry, STYLE_SEARCH, STYLE_TEXT_NEW);
+            options.add(tagBar);
+        }
+
+        for (TagHeader tag : marked) {
+            var entry = "[" + tag.getName() + "]";
+            var tagBar = new FunctionBar((selector, self) -> {
+                self.setDisplayTextType(STYLE_TEXT_PLAIN);
+                // selector.getBarManager().updateBar();
+            }, entry, STYLE_SEARCH, STYLE_TEXT_NEW);
+            options.add(tagBar);
         }
     }
 
@@ -392,7 +432,6 @@ public class ContextMenuBar extends DirectoryBar {
 //  ir rival scores
 //  readme (imgui popup)
 //  play history
-//	tag editing
 //  replay score, lamp, random lanes
 
 // folder menu:
